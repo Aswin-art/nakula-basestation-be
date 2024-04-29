@@ -14,9 +14,11 @@
     "generate-messages": "node_modules/.bin/generate-ros-messages"
   },
   "dependencies": {
+    "axios": "^1.6.8",
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "rclnodejs": "^0.26.1"
+    "rclnodejs": "^0.26.1",
+    "telnet-client": "^2.2.0"
   },
   "devDependencies": {
     "@types/node": "^18.15.0",
