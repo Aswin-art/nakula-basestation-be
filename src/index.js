@@ -362,23 +362,66 @@ app.get("/api/robot-command/repair", async (req, res) => {
 });
 
 // go-to-goal
+let node = null;
+let publisher = null;
+let intervalId = null;
 app.get("/api/robot-command/go-to-goal", async (req, res) => {
-  let node = null;
-
   const { x, y, theta } = req.query;
 
   try {
+    // Inisialisasi ROS 2
     await rclnodejs.init();
-    node = rclnodejs.createNode("robot_node");
-    const publisher = node.createPublisher(
-      "geometry_msgs/msg/Pose2D",
-      "robot_pose_request"
-    );
 
+    // Buat node ROS 2 hanya jika belum dibuat
+    if (!node) {
+      node = rclnodejs.createNode("robot_node");
+    }
+
+    // Buat publisher jika belum dibuat
+    if (!publisher) {
+      publisher = node.createPublisher(
+        "geometry_msgs/msg/Pose2D",
+        "robot_pose_request"
+      );
+    }
+
+    // Buat pesan geometry_msgs/Pose2D
     const message = rclnodejs.createMessageObject("geometry_msgs/msg/Pose2D");
     message.x = parseFloat(x);
     message.y = parseFloat(y);
     message.theta = parseFloat(theta);
+
+    // Hentikan interval yang berjalan (jika ada)
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+
+    // Mulai interval baru untuk menerbitkan pesan setiap 100ms
+    intervalId = setInterval(() => {
+      publisher.publish(message);
+    }, 100);
+
+    res
+      .status(200)
+      .json({ success: true, message: "Publishing to ROS 2 every 100ms" });
+  } catch (error) {
+    console.error("Error interacting with ROS 2:", error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to interact with ROS 2: ${error.message}`,
+    });
+  }
+});
+
+app.get("/api/robot-command/mode-one", async (req, res) => {
+  let node = null;
+  try {
+    await rclnodejs.init();
+    node = rclnodejs.createNode("mode1");
+    const publisher = node.createPublisher("std_msgs/msg/String", "mode1");
+
+    const message = rclnodejs.createMessageObject("std_msgs/msg/String");
+    message.data = "Start";
     publisher.publish(message);
 
     res.status(200).json({ success: true, message: "Published to ROS 2" });
