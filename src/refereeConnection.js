@@ -1,34 +1,36 @@
-const dgram = require("dgram");
+const net = require("net");
 
-// Membuat soket UDP
-const socket = dgram.createSocket("udp4");
+// Alamat IP dan port Referee Box
+const refereeBoxIp = "192.168.0.9"; // Ubah ini dengan alamat IP Referee Box
+const refereeBoxPort = 28097; // Ubah ini dengan port Referee Box
 
-// Konfigurasi alamat dan port RefereeBox
-const refereeBoxHost = "192.168.0.160";
-const refereeBoxPort = 28097;
+// Membuat koneksi TCP ke Referee Box
+const client = new net.Socket();
 
-// Fungsi untuk mendengarkan pesan yang diterima dari RefereeBox
-socket.on("message", (msg, rinfo) => {
-  console.log("Received message from RefereeBox:", msg.toString());
-  console.log("From:", rinfo);
+client.connect(refereeBoxPort, refereeBoxIp, () => {
+  console.log("Terkoneksi ke Referee Box");
+  // Anda dapat mengirim permintaan atau pesan ke Referee Box di sini
+  // Misalnya, kirim pesan ke Referee Box untuk memulai permainan
+  client.write("Start Game");
 });
 
-// Fungsi untuk menangani kesalahan pada soket
-socket.on("error", (error) => {
-  console.error("Socket error:", error);
+// Tangani data yang diterima dari Referee Box
+client.on("data", (data) => {
+  console.log("Data dari Referee Box:", data.toString());
+  // Proses data yang diterima sesuai kebutuhan
+  // Misalnya, Anda dapat memeriksa perintah yang diterima
+  if (data.toString().trim() === "Start") {
+    console.log("Memulai proses berdasarkan perintah Start");
+    // Panggil fungsi yang diperlukan untuk menangani perintah Start
+  }
 });
 
-// Fungsi untuk menangani penutupan soket
-socket.on("close", () => {
-  console.log("Socket closed");
+// Tangani error koneksi
+client.on("error", (err) => {
+  console.error("Error koneksi:", err.message);
 });
 
-// Mengikat soket ke alamat dan port lokal untuk mendengarkan pesan
-socket.bind(() => {
-  console.log(
-    `Listening for messages from RefereeBox on ${refereeBoxHost}:${refereeBoxPort}`
-  );
+// Tangani koneksi yang ditutup
+client.on("close", () => {
+  console.log("Koneksi ke Referee Box ditutup");
 });
-
-// Mengirim pesan ke RefereeBox
-socket.send("", 28097, "192.168.0.160");

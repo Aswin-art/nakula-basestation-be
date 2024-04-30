@@ -1,9 +1,30 @@
 const express = require("express");
 const cors = require("cors");
 const rclnodejs = require("rclnodejs");
+const net = require("net");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 app.use(cors());
+
+const server = http.createServer();
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Tentukan origin client
+    methods: ["GET", "POST"],
+  },
+});
+
+// Mulai server HTTP di port 5000
+server.listen(4000, () => {
+  console.log("Server soket berjalan di port 4000");
+});
+
+const refereeBoxIp = "192.168.201.85";
+const refereeBoxPort = 28097;
+
+const client = new net.Socket();
 
 app.get("/", async (req, res) => {
   res.status(200).json({
@@ -12,30 +33,134 @@ app.get("/", async (req, res) => {
   });
 });
 
+io.on("connection", (socket) => {
+  console.log("Client terhubung:", socket.id);
+});
+
+// Handle Koneksi RefereeBox
+client.on("data", (data) => {
+  const returnMessage = data.toString();
+
+  const endPos = returnMessage.lastIndexOf("}") + 1;
+
+  const jsonData = returnMessage.substring(0, endPos);
+
+  try {
+    const message = JSON.parse(jsonData);
+
+    console.log("Command:", message.command);
+    console.log("Target Team:", message.targetTeam);
+
+    switch (message.command) {
+      case "WELCOME": {
+        console.log("Koneksi Telah Tersambung");
+        io.emit("message", "Koneksi Telah Tersambung");
+        break;
+      }
+
+      case "START": {
+        console.log("Menerima perintah START dari Referee Box");
+        io.emit("message", "START");
+        break;
+      }
+
+      case "STOP": {
+        console.log("Menerima perintah STOP dari Referee Box");
+        io.emit("message", "STOP");
+        break;
+      }
+
+      case "DROP_BALL": {
+        console.log("Menerima perintah DROP_BALL dari Referee Box");
+        io.emit("message", "DROP_BALL");
+        break;
+      }
+
+      case "PARK": {
+        console.log("Menerima perintah PARK dari Referee Box");
+        io.emit("message", "PARK");
+        break;
+      }
+
+      case "RESET": {
+        console.log("Menerima perintah RESET dari Referee Box");
+        io.emit("message", "RESET");
+        break;
+      }
+
+      case "SUBSTITUTE": {
+        console.log("Menerima perintah SUBSTITUTE dari Referee Box");
+        io.emit("message", "SUBSTITUTE");
+        break;
+      }
+
+      case "ENDPART": {
+        console.log("Menerima perintah ENDPART dari Referee Box");
+        io.emit("message", "ENDPART");
+        break;
+      }
+
+      case "KICKOFF": {
+        console.log("Menerima perintah KICKOFF dari Referee Box");
+        io.emit("message", "KICKOFF");
+        break;
+      }
+
+      case "FREEKICK": {
+        console.log("Menerima perintah FREEKICK dari Referee Box");
+        io.emit("message", "FREEKICK");
+        break;
+      }
+
+      case "GOALKICK": {
+        console.log("Menerima perintah GOALKICK dari Referee Box");
+        io.emit("message", "GOALKICK");
+        break;
+      }
+
+      case "THROWIN": {
+        console.log("Menerima perintah THROWIN dari Referee Box");
+        io.emit("message", "THROWIN");
+        break;
+      }
+
+      case "CORNER": {
+        console.log("Menerima perintah CORNER dari Referee Box");
+        io.emit("message", "CORNER");
+        break;
+      }
+
+      case "PENALTY": {
+        console.log("Menerima perintah PENALTY dari Referee Box");
+        io.emit("message", "PENALTY");
+        break;
+      }
+
+      default: {
+        console.log("Command tidak dikenal:", message.command);
+      }
+    }
+  } catch (error) {
+    console.error("Error parsing JSON:", error);
+  }
+});
+
+client.on("error", (err) => {
+  console.error("Error koneksi:", err.message);
+});
+
+client.on("close", () => {
+  console.log("Koneksi ke Referee Box ditutup");
+});
+
 // referee
 // connect
 app.get("/api/referee-command/connect", async (req, res) => {
-  let node = null;
-  const address = req.address;
-  const port = req.port;
-
-  try {
-    await rclnodejs.init();
-    node = rclnodejs.createNode("example_node");
-    const publisher = node.createPublisher("std_msgs/msg/String", "chatter");
-
-    const message = rclnodejs.createMessageObject("std_msgs/msg/String");
-    message.data = "Hello from Express with ROS 2!";
-    publisher.publish(message);
-
-    res.status(200).json({ success: true, message: "Published to ROS 2" });
-  } catch (error) {
-    console.error("Error interacting with ROS 2:", error);
-    res.status(500).json({
-      success: false,
-      error: `Failed to interact with ROS 2: ${error.message}`,
-    });
-  }
+  const { ipaddress, port } = req.query;
+  client.connect(port, refereeBoxIp, () => {
+    console.log("Menyambungkan ke Referee Box");
+    io.emit("message", "Menyambungkan ke Referee Box");
+  });
 });
 
 // disconnect
